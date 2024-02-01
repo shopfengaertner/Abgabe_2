@@ -1,3 +1,93 @@
+# Aufgabe 3.1 -------------------------------------------------------------
+
+wichteln_simulation <- function(n) {     ## Simulation einer Funktion eines Wichtelspiels
+  geschenke <- 1:n                       ## Gilt für 1 bis n Geschenke
+  zuteilung <- sample(geschenke)         ## Lässt die n Geschenke in einer zufälligen Reihenfolge aufzählen 
+  return(any(geschenke == zuteilung))    ## Überprüft ob die Geschenke zu der Zuteilung passen
+}
+
+berechne_wahrscheinlichkeit <- function(n, simulationsanzahl = 100000) {  ## Simulation von 100000 Durchgängen
+  treffer <- replicate(simulationsanzahl, wichteln_simulation(n))         ## Durchgänge werden immer wieder wiederholt
+  return(mean(treffer))                                                   ## Mittelwert der Treffer 
+}
+
+
+
+n <- 10                                                 ## Berechnung für n = 10
+wahrscheinlichkeit <- berechne_wahrscheinlichkeit(n)    ## Berechnung der Wahrscheinlichkeit
+print(wahrscheinlichkeit)                               ## Ergebnis der Rechnung
+
+
+
+
+# Aufgabe 3.2 -------------------------------------------------------------
+
+
+## Funktion simuliert Wichteln, um Wahrscheinlichkeit zu berechnen, dass mind. k unter n Personen ihr eigenes Geschenk ziehen
+
+## n: Anzahl Personen, die an Wichteln teilnehmen
+## k: Anzahl Personen, die ihr Geschenk bekommen
+## Iterationen: Anzahl von Simulationen; hier standardmäßig 1000
+
+## Return: berechnete Wahrscheinlichkeit, dass mind. k Personen ihr eigenes Geschenk ziehen
+wichtel_unglueck <- function(n, k, iterationen = 1000) {
+  ## gibt TRUE zurück, wenn mindestens k Personen ihr eigenes Geschenk ziehen
+  treffer_simulation <- function() {
+    geschenke <- 1:n
+    zuteilung <- sample(geschenke)
+    return(sum(geschenke == zuteilung) >= k)
+  }
+  ## führt Simulation "Iterationen"-mal durch => berechnet Mittelwert
+  treffer <- replicate(iterationen, treffer_simulation())
+  return(mean(treffer))
+}
+
+# Beispielaufruf der Funktion
+## berechnet Wahrscheinlichkeit für n= 10 und k= 2 mit 1000 Iterationen
+n <- 10
+k <- 2
+iterationen <- 1000
+wahrscheinlichkeit <- wichtel_unglueck(n, k, iterationen)
+print(wahrscheinlichkeit)
+
+
+# Aufgabe 3.4 -------------------------------------------------------------
+
+
+install.packages("testthat")
+library(testthat)
+## 1. Testfall: wichtel_unglueck( n = 1, k = 1 ) sollte immer 1 zurückgeben
+## Wenn nur eine Person beim Wichteln mitmacht, sollte die Wahrscheinlichkeit, 
+## dass diese ihr eigenes Geschenk zieht 1 sein
+
+test_that("Eine Person erhält immer ihr eigenes Geschenk zurück", {
+  expect_equal(wichtel_unglueck( n = 1, k = 1), 1)
+})
+
+# 2. Testfall: wichtel_unglueck( n, k, iterationen = "ganz, ganz viele")
+## bei ungültigem iterationen_Wert sollte ein Fehler auftreten
+
+test_that("Fehler bei ungültigem iterationen_Wert", {
+  expect_error(wichtel_unglueck( n = 5, k = 2, iterationen = "ganz, ganz viele"))
+})
+
+# 3. Testfall: wichtel_unglueck( n = 5, k = 6) sollte immer 0 zurückgeben
+## es können nicht mehr Personen ihr eigenes Geschenk zurückbekommen, als teilnehmen
+
+test_that("Unmöglicher Fall mit mehr Treffern als Teilnehmern", {
+  expect_equal(wichtel_unglueck( n= 5, k = 6), 0)
+})
+
+# 4. Testfall: wichtel_unglueck( n = 10, k = 0), sollte immer 1 zurückgeben
+## mind. 0 Personen, die ihr Geschenk zurückbekommen, ist immer erfüllt
+
+test_that("Mind. 0 Personen erhalten immer ihr eigenes Geschenk zurück", {
+  expect_equal(wichtel_unglueck( n = 10, k = 0),1)
+})
+
+# Aufgabe 3.5 -------------------------------------------------------------
+
+
 setwd("/xxx/Documents/Uni/COMET")        ## Ort, an dem der Datensatz gespeichert ist
 data <- read.csv("Capital_bikeshare_data_2022_with_NAs.csv")
 library(dplyr)     ## Paket zum Filtern des Datensatzes
