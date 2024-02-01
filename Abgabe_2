@@ -1,0 +1,204 @@
+setwd("/xxx/Documents/Uni/COMET")        ## Ort, an dem der Datensatz gespeichert ist
+data <- read.csv("Capital_bikeshare_data_2022_with_NAs.csv")
+library(dplyr)     ## Paket zum Filtern des Datensatzes
+gruppe_10 <- c("Vermont Ave & I St NW")     ## Namen unserer Station speichern, um damit zu filtern
+Vermont_Ave_I_St_NW <- data %>% filter(station %in% gruppe_10)
+write.csv(Vermont_Ave_I_St_NW, "Vermont_Ave_&_I_St_NW", row.names = FALSE)  ## Speichern unseren (gefilterten) Datensatz ab
+daten <- read.csv("Vermont_Ave_&_I_St_NW")
+View(daten)   ## schauen Datensatz an
+
+## In welchen Spalten gibt es NAs und in welchen Zeilen sind diese?
+id <- which(is.na(daten$count))
+## Zeilen 93, 174, 265
+## diese löschen wir raus, weil es nur 0.9% der gesamten Zeilen sind und die 
+## Werte der anderen Zeilen willkürlich erscheinen
+which(is.na(daten$precipitation))
+which(is.na(daten$snowfall))
+which(is.na(daten$wind_speed))
+which(is.na(daten$snow_depth))
+## in Spalten percipitation, snowfall, wind_speed, snow_depth sind keine NAs
+
+daten_ohne_na <- daten[-id,] ## löschen NAs in Spalte Count
+
+id2 <- which(is.na(daten_ohne_na$mean_temperature))
+## Zeilen 76, 222, 245 nach Löschung der Zeilen mit NAs in Spalte Count
+
+
+na_mean <- daten_ohne_na[id2,]   ## nur Datenzeilen in denen NAs in der Spalte mean_temperature abspeichern
+werte_zum_ersetzen <- (na_mean$max_temperature+na_mean$min_temperature)/2   
+## berechnen die Durchschnittstemperatur mit Hilfe der Spalten max_temperature und min_temperature
+daten_ohne_na[id2, "mean_temperature"] <- werte_zum_ersetzen  ## Ersetzen der NAs durch berechnete Durchschnittstemperatur
+daten_ohne_na  ## Daten anzeigen lassen
+which(is.na(daten_ohne_na$mean_temperature)) ## Überprüfung ob Ersetzung funktioniert hat
+attach(daten_ohne_na)  ## zur Vereinfachung der weiteren Codes (können daten_ohne_na$... weglassen)
+
+
+## Datenanomalien
+# which.max(new_data$count)
+# mean(new_data$count, na.rm = TRUE)
+# which.min(new_data$snowfall)
+# which.max(snowfall)
+# mean(precipitation)
+# which.max(snow_depth)
+# which.min(snow_depth)  ## bis hierhin nur probiert, aber die folgenden Befehle haben uns besse verwertbare Ergebnise gebracht
+range(count, na.rm = TRUE)
+mean(count)   ## schauen, ob 120 realistisch ist
+range(snowfall)
+range(precipitation)
+range(snow_depth)
+mean(snow_depth)
+range(wind_speed)
+## wind_speed =-1 ist unralistisch, wird im Folgenden gelöscht
+mean(wind_speed)
+range(mean_temperature, na.rm = TRUE)
+range(min_temperature)
+range(max_temperature)
+falsche_wind_speed <- which(wind_speed == -1)
+## wind_speed bei -1 löschen, weil die range relativ groß ist und nicht gut 
+## ersetzt werden kann
+neue_daten <- daten_ohne_na[-falsche_wind_speed, ]
+attach(neue_daten)
+
+
+# Aufgabe 4.1 -------------------------------------------------------------
+
+## install.packages("ggplot2") ## Pakete herunterladen und laden
+library(ggplot2)
+## install.packages("ggthemes")
+library(ggthemes)
+## install.packages("gridExtra")
+library(gridExtra)
+## install.packages("plotly")
+library(plotly)
+
+## date als Datum speichern
+neue_daten$date <- as.Date(neue_daten$date, format = "%Y-%m-%d")
+class(neue_daten$date)
+attach(neue_daten)
+
+mittlere_temperatur <- ggplot(data = neue_daten) +
+  geom_point(aes(x = mean_temperature, y = count)) +
+  xlab("mittlere Teperatur") +
+  ylab("ausgeliehene Räder") +
+  ggtitle("der mittleren Temperatur")
+
+niederschlagsmenge <- ggplot(data = neue_daten) +
+  geom_point(aes(x = precipitation, y = count)) +
+  xlab("Niederschlagsmenge") +
+  ylab("ausgeliehene Räder") +
+  ggtitle("der Niederschlagsmenge")
+
+windgeschwindigkeit <- ggplot(data = neue_daten) +
+  geom_point(aes(x = wind_speed, y = count)) +
+  xlab("Windgeschwindigkeit") +
+  ylab("ausgeliehene Räder") +
+  ggtitle("der Windgeschwindigkeit")
+
+zeit <- ggplot(data = neue_daten) +
+  geom_point(aes(x = date, y = count)) +
+  xlab("Zeit") +
+  ylab("ausgeliehene Räder") +
+  ggtitle("der Zeit")
+
+grid.arrange(mittlere_temperatur, niederschlagsmenge, 
+             windgeschwindigkeit, zeit,
+             nrow = 2, ncol = 2)
+
+# Aufgabe 4.2 -------------------------------------------------------------
+
+
+
+regentage <- ggplot(data = filter(neue_daten, precipitation > 0)) +
+  geom_point(aes(x = mean_temperature, y = count)) +
+  xlab("mittlere Temperatur in Fahrenheit") +
+  ylab("Anzahl ausgeliehener Fahrräder") +
+  ggtitle("Ausgeliehene Fahrräder an Regentagen") +
+  scale_x_continuous(limits = c(20,100)) +
+  scale_y_continuous(limits = c(0,125),
+                     breaks = seq(0, 125, 25))
+
+regenfreietage <- ggplot(data = filter(neue_daten, precipitation == 0)) +
+  geom_point(aes(x = mean_temperature, y = count)) +
+  xlab("mittlere Temperatur in Fahrenheit") +
+  ylab("Anzahl ausgeliehener Fahrräder") +
+  ggtitle("Ausgeliehene Fahrräder an Regenfreientagen") +
+  scale_x_continuous(limits = c(20,100)) +
+  scale_y_continuous(limits = c(0,125),
+                     breaks = seq(0, 125,25))
+
+grid.arrange(regentage, regenfreietage, nrow = 1, ncol = 2)
+
+
+
+# Aufgabe 4.3 -------------------------------------------------------------
+
+bild1 <- ggplot(neue_daten, aes(x = count)) +
+  geom_histogram(binwidth = 5, fill = "blue", color = "black") +  
+  ### binwidth: Breite der Säulen
+  labs(title = "Verteilung der Anzahl ausgeliehener Fahrräder",
+       x = "Anzahl ausgeliehener Fahrräder",
+       y = "Häufigkeit") +
+  theme_minimal()
+
+bild2 <- ggplot(neue_daten, aes(x = mean_temperature)) +
+  geom_histogram(binwidth = 3, fill = "red", color = "black") +
+  labs(title = "Temperaturverteilung",
+       x = "Temperatur (°F)",
+       y = "Häufigkeit") +
+  theme_minimal()
+
+bild3 <- ggplot(neue_daten, aes(x = precipitation)) +
+  geom_histogram(binwidth = 0.5, fill = "green", color = "black") +
+  labs(title = "Verteilung der Niederschlagsmenge",
+       x = "Niederschlagsmenge (mm)",
+       y = "Häufigkeit") +
+  theme_minimal()
+
+bild4 <- ggplot(neue_daten, aes(x = wind_speed)) +
+  geom_histogram(binwidth = 1, fill = "orange", color = "black") +
+  labs(title = "Verteilung der Windgeschwindigkeit",
+       x = "Windgeschwindigkeit (km/h)",
+       y = "Häufigkeit") +
+  theme_minimal()
+
+grid.arrange(bild1, bild2, bild3, bild4, ncol = 2, nrow = 2)
+
+# Aufgabe 4.4 -------------------------------------------------------------
+
+## install.packages("lubridate")
+library(lubridate)
+
+neue_daten <- neue_daten %>%
+  mutate(Jahreszeit = case_when(
+    month(date) %in% c(3, 4, 5) ~ "Frühling",
+    month(date) %in% c(6, 7, 8) ~ "Sommer",
+    month(date) %in% c(9, 10, 11) ~ "Herbst",
+    TRUE ~ "Winter"
+  ))
+
+ggplot(neue_daten, aes(x = count, fill = Jahreszeit)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Frühling" = "blue", "Sommer" = "yellow",
+                               "Herbst" = "green", "Winter" = "black")) +
+  labs(title = "Verteilung der Anzahl ausgeliehener Fahrräder nach Jahreszeiten",
+       x = "Anzahl ausgeliehener Fahrräder",
+       y = "Dichte") +
+  theme_minimal()
+
+
+
+# Aufgabe 4.5 -------------------------------------------------------------
+
+fig <- plot_ly(data = neue_daten, x = ~mean_temperature, y = ~wind_speed, z = ~count,
+               type = "scatter3d", mode = "markers",
+               marker = list(size = 5,
+                             color = ~count,   # Farbe abhängig von der Anzahl der Fahrräder
+                             colorscale = 'Viridis',             # Farbskala
+                             opacity = 0.8))                     # Transparenz der Punkte
+
+# Layout-Einstellungen
+fig <- fig %>% layout(title = "3D Scatterplot: Temperatur, Windgeschwindigkeit und ausgeliehene Fahrräder",
+                      scene = list(xaxis = list(title = "Temperatur"),
+                                   yaxis = list(title = "Windgeschwindigkeit"),
+                                   zaxis = list(title = "Ausgeliehene Fahrräder")))
+fig
